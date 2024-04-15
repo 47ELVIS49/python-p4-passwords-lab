@@ -1,28 +1,59 @@
-from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy_serializer import SerializerMixin
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import validates
+db = SQLAlchemy()
 
-from config import db, bcrypt
-
-class User(db.Model, SerializerMixin):
-    __tablename__ = 'users'
-
+class Author(db.Model):
+    __tablename__ = 'authors'
+    
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String)
-    _password_hash = db.Column(db.String)
+    name= db.Column(db.String, unique=True, nullable=False)
+    phone_number = db.Column(db.String)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime, onupdate=db.func.now())
 
-    @hybrid_property
-    def password_hash(self):
-        raise Exception('Password hashes may not be viewed.')
-
-    @password_hash.setter
-    def password_hash(self, password):
-        password_hash = bcrypt.generate_password_hash(
-            password.encode('utf-8'))
-        self._password_hash = password_hash.decode('utf-8')
-
-    def authenticate(self, password):
-        return bcrypt.check_password_hash(
-            self._password_hash, password.encode('utf-8'))
+    # Add validators 
+    @validates('name')
+    def validate_name(self, key, name):
+        if name == "":
+            raise ValueError("Name should not be an empty string")
+        else:
+            if Author.query.filter(Author.name == name).first():
+                raise ValueError("Name already exists")
+        return name
+    
+    @validates('phone_number')
+    def validate_phone_number(self, key, number):
+        if len(number) != 10 or not number.isdigit():
+            raise ValueError("Number should have 10 digits")
+        return number
 
     def __repr__(self):
-        return f'User {self.username}, ID: {self.id}'
+        return f'Author(id={self.id}, name={self.name})'
+
+class Post(db.Model):
+    __tablename__ = 'posts'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String, nullable=False)
+    content = db.Column(db.String)
+    category = db.Column(db.String)
+    summary = db.Column(db.String)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime, onupdate=db.func.now())
+
+    # Add validators  
+    @validates('content')
+    def validate_content(self, key, words):
+        if len(words) != 250 or len(words) > 250:
+            raise ValueError("Content should be at least 250 characters long")
+        return words
+
+    @validates('summary')
+    def validate_summary(self, key, words):
+        if len(words) != 250:
+            raise ValueError("Content should be 250 characters long")
+        return words
+
+    def __repr__(self):
+        return f'Post(id={self.id}, title={self.title} content={self.content}, summary={self.summary})'
+

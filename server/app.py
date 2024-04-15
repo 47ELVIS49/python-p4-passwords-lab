@@ -1,43 +1,19 @@
-#!/usr/bin/env python3
+from flask import Flask, make_response
+from flask_migrate import Migrate
 
-from flask import request, session
-from flask_restful import Resource
+from models import db, Author, Post
 
-from config import app, db, api
-from models import User
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-class ClearSession(Resource):
+migrate = Migrate(app, db)
 
-    def delete(self):
-    
-        session['page_views'] = None
-        session['user_id'] = None
+db.init_app(app)
 
-        return {}, 204
-
-class Signup(Resource):
-    
-    def post(self):
-        json = request.get_json()
-        user = User(
-            username=json['username']
-        )
-        user.password_hash = json['password']
-        db.session.add(user)
-        db.session.commit()
-        return user.to_dict(), 201
-
-class CheckSession(Resource):
-    pass
-
-class Login(Resource):
-    pass
-
-class Logout(Resource):
-    pass
-
-api.add_resource(ClearSession, '/clear', endpoint='clear')
-api.add_resource(Signup, '/signup', endpoint='signup')
+@app.route('/')
+def index():
+    return 'Validations lab'
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
